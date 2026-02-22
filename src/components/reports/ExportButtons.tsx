@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
-import { Download } from "lucide-react";
+import { Download, FileText } from "lucide-react";
+import { exportOverduePDF, exportPopularPDF } from "@/lib/pdf-export";
 
 function downloadCsv(filename: string, headers: string[], rows: string[][]) {
   const csv = [headers.join(","), ...rows.map((r) => r.map((v) => `"${(v || "").replace(/"/g, '""')}"`).join(","))].join("\n");
@@ -18,7 +19,7 @@ interface ExportButtonsProps {
 }
 
 export function ExportButtons({ overdueData, popularData }: ExportButtonsProps) {
-  const exportOverdue = () => {
+  const exportOverdueCsv = () => {
     if (!overdueData) return;
     downloadCsv(
       "overdue-books.csv",
@@ -27,7 +28,7 @@ export function ExportButtons({ overdueData, popularData }: ExportButtonsProps) 
     );
   };
 
-  const exportPopular = () => {
+  const exportPopularCsv = () => {
     if (!popularData) return;
     downloadCsv(
       "popular-books.csv",
@@ -39,14 +40,24 @@ export function ExportButtons({ overdueData, popularData }: ExportButtonsProps) 
   return (
     <div className="flex gap-2 flex-wrap">
       {overdueData && overdueData.length > 0 && (
-        <Button variant="outline" size="sm" onClick={exportOverdue}>
-          <Download className="h-4 w-4 mr-2" />Export Overdue
-        </Button>
+        <>
+          <Button variant="outline" size="sm" onClick={exportOverdueCsv}>
+            <Download className="h-4 w-4 mr-2" />Overdue CSV
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => exportOverduePDF(overdueData)}>
+            <FileText className="h-4 w-4 mr-2" />Overdue PDF
+          </Button>
+        </>
       )}
       {popularData && popularData.length > 0 && (
-        <Button variant="outline" size="sm" onClick={exportPopular}>
-          <Download className="h-4 w-4 mr-2" />Export Popular
-        </Button>
+        <>
+          <Button variant="outline" size="sm" onClick={exportPopularCsv}>
+            <Download className="h-4 w-4 mr-2" />Popular CSV
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => exportPopularPDF(popularData)}>
+            <FileText className="h-4 w-4 mr-2" />Popular PDF
+          </Button>
+        </>
       )}
     </div>
   );

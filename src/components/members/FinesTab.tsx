@@ -26,7 +26,7 @@ export function FinesTab({ userId }: FinesTabProps) {
       {total > 0 && (
         <div className="glass rounded-lg p-4 flex items-center justify-between">
           <span className="text-sm font-medium">Outstanding Balance</span>
-          <span className="text-lg font-bold text-destructive">${total.toFixed(2)}</span>
+          <span className="text-lg font-bold text-destructive">₹{total.toFixed(2)}</span>
         </div>
       )}
 
@@ -45,7 +45,7 @@ export function FinesTab({ userId }: FinesTabProps) {
             {fines.map((f) => (
               <TableRow key={f.id}>
                 <TableCell className="font-medium">{f.book_title}</TableCell>
-                <TableCell>${Number(f.amount).toFixed(2)}</TableCell>
+                <TableCell>₹{Number(f.amount).toFixed(2)}</TableCell>
                 <TableCell>
                   <Badge variant={f.waived ? "secondary" : f.paid ? "default" : "destructive"}>
                     {f.waived ? "Waived" : f.paid ? "Paid" : "Unpaid"}

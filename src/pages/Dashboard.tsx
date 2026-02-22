@@ -1,10 +1,12 @@
-import { BookOpen, Users, ArrowLeftRight, CalendarClock, BarChart3, DollarSign, Trophy } from "lucide-react";
+import { BookOpen, Users, ArrowLeftRight, CalendarClock, BarChart3, IndianRupee, Trophy, Sparkles } from "lucide-react";
 import { useDashboardStats } from "@/hooks/use-dashboard-stats";
 import { useBorrowingTrends } from "@/hooks/use-reports";
 import { useUnpaidFinesTotal } from "@/hooks/use-fines";
 import { useAuth } from "@/contexts/AuthContext";
+import { useBookRecommendations } from "@/hooks/use-recommendations";
 import { Leaderboard } from "@/components/reports/Leaderboard";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { useNavigate } from "react-router-dom";
 
 const Dashboard = () => {
   const { data: stats, isLoading } = useDashboardStats();
@@ -12,6 +14,8 @@ const Dashboard = () => {
   const { role } = useAuth();
   const isStaff = role === "admin" || role === "librarian";
   const unpaidFines = useUnpaidFinesTotal();
+  const { data: recommendations } = useBookRecommendations(6);
+  const navigate = useNavigate();
 
   const cards = [
     { label: "Total Books", value: stats?.totalBooks ?? "—", icon: BookOpen, color: "text-primary" },
@@ -21,14 +25,14 @@ const Dashboard = () => {
   ];
 
   if (isStaff && unpaidFines > 0) {
-    cards.push({ label: "Unpaid Fines", value: `$${unpaidFines.toFixed(2)}`, icon: DollarSign, color: "text-destructive" });
+    cards.push({ label: "Unpaid Fines", value: `₹${unpaidFines.toFixed(2)}`, icon: IndianRupee, color: "text-destructive" });
   }
 
   return (
     <div className="space-y-6 animate-in-up">
       <div>
-         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Dashboard</h1>
-         <p className="text-muted-foreground mt-1 text-sm sm:text-base">Welcome to ShelfWise. Your library at a glance.</p>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Dashboard</h1>
+        <p className="text-muted-foreground mt-1 text-sm sm:text-base">Welcome to ShelfWise. Your library at a glance.</p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {cards.map((stat) => (
@@ -80,6 +84,37 @@ const Dashboard = () => {
         </div>
         <Leaderboard />
       </div>
+
+      {/* Recommendations */}
+      {recommendations && recommendations.length > 0 && (
+        <div className="glass rounded-lg p-4 sm:p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Sparkles className="h-5 w-5 text-primary" />
+            <h2 className="text-base sm:text-lg font-semibold">Recommended for You</h2>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            {recommendations.map((book) => (
+              <div
+                key={book.id}
+                className="group cursor-pointer"
+                onClick={() => navigate(`/books/${book.id}`)}
+              >
+                <div className="aspect-[3/4] rounded-lg overflow-hidden bg-muted mb-2">
+                  {book.cover_image_url ? (
+                    <img src={book.cover_image_url} alt={book.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <BookOpen className="h-8 w-8 text-muted-foreground/30" />
+                    </div>
+                  )}
+                </div>
+                <p className="text-sm font-medium line-clamp-1 group-hover:text-primary transition-colors">{book.title}</p>
+                <p className="text-xs text-muted-foreground line-clamp-1">{book.author}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

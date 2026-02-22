@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { BookOpen, Plus, Search, Pencil, Trash2, Upload, Eye, Filter, CheckSquare, X } from "lucide-react";
+import { BookOpen, Plus, Search, Pencil, Trash2, Upload, Eye, Filter, CheckSquare, X, ScanLine } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +13,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { BookFormDialog } from "@/components/books/BookFormDialog";
 import { DeleteBookDialog } from "@/components/books/DeleteBookDialog";
 import { CsvImportDialog } from "@/components/books/CsvImportDialog";
+import { BarcodeScanner } from "@/components/books/BarcodeScanner";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 
@@ -37,6 +38,7 @@ const Books = () => {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
   const [csvOpen, setCsvOpen] = useState(false);
+  const [scanOpen, setScanOpen] = useState(false);
 
   // Bulk selection
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -45,6 +47,19 @@ const Books = () => {
   const handleEdit = (book: Book) => { setEditBook(book); setFormOpen(true); };
   const handleAdd = () => { setEditBook(null); setFormOpen(true); };
   const handleDelete = (book: Book) => { setDeleteTarget({ id: book.id, title: book.title }); setDeleteOpen(true); };
+
+  const handleScan = (result: string) => {
+    try {
+      const parsed = JSON.parse(result);
+      if (parsed.type === "member" && parsed.id) {
+        navigate(`/members/${parsed.id}`);
+        return;
+      }
+    } catch { }
+    // Treat as ISBN search
+    setSearch(result);
+    toast({ title: "Scanned!", description: `Searching for: ${result}` });
+  };
 
   // Apply client-side filters for availability and year range
   const filteredBooks = books?.filter((book) => {
@@ -100,6 +115,9 @@ const Books = () => {
         </div>
         {isStaff && (
           <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setScanOpen(true)}>
+              <ScanLine className="h-4 w-4 mr-2" />Scan
+            </Button>
             <Button variant="outline" onClick={() => setCsvOpen(true)}>
               <Upload className="h-4 w-4 mr-2" />Import CSV
             </Button>
@@ -258,6 +276,7 @@ const Books = () => {
       <BookFormDialog open={formOpen} onOpenChange={setFormOpen} book={editBook} />
       <DeleteBookDialog open={deleteOpen} onOpenChange={setDeleteOpen} bookId={deleteTarget?.id ?? null} bookTitle={deleteTarget?.title ?? ""} />
       <CsvImportDialog open={csvOpen} onOpenChange={setCsvOpen} />
+      <BarcodeScanner open={scanOpen} onOpenChange={setScanOpen} onScan={handleScan} />
     </div>
   );
 };

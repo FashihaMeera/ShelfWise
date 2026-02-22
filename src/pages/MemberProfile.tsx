@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, User } from "lucide-react";
+import { ArrowLeft, User, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -10,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { RoleSelector } from "@/components/members/RoleSelector";
 import { FinesTab } from "@/components/members/FinesTab";
+import { MemberCardDialog } from "@/components/members/MemberCardDialog";
 import { format } from "date-fns";
 
 function useMemberDetail(id: string) {
@@ -71,6 +73,7 @@ const MemberProfile = () => {
 
   const activeLoans = borrowings?.filter((b) => !b.returned_at) || [];
   const pastLoans = borrowings?.filter((b) => b.returned_at) || [];
+  const [cardOpen, setCardOpen] = useState(false);
 
   if (isLoading) return <div className="p-12 text-center text-muted-foreground">Loading...</div>;
   if (!member) return <div className="p-12 text-center text-muted-foreground">Member not found.</div>;
@@ -97,6 +100,9 @@ const MemberProfile = () => {
             )}
           </div>
         </div>
+        <Button variant="outline" size="sm" onClick={() => setCardOpen(true)} className="gap-2 shrink-0">
+          <CreditCard className="h-4 w-4" /> Library Card
+        </Button>
       </div>
 
       <Tabs defaultValue="active">
@@ -201,6 +207,15 @@ const MemberProfile = () => {
           <FinesTab userId={id!} />
         </TabsContent>
       </Tabs>
+
+      <MemberCardDialog
+        open={cardOpen}
+        onOpenChange={setCardOpen}
+        memberId={id!}
+        memberName={member.full_name || "Unnamed"}
+        memberRole={member.role}
+        memberAvatar={member.avatar_url}
+      />
     </div>
   );
 };

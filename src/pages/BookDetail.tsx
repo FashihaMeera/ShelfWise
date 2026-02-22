@@ -1,5 +1,5 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { ArrowLeft, BookOpen, Heart, CalendarClock } from "lucide-react";
+import { ArrowLeft, BookOpen, Heart, CalendarClock, Clock } from "lucide-react";
 import { BookTagsDisplay } from "@/components/books/BookTagsDisplay";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +14,7 @@ import { useCreateReservation } from "@/hooks/use-reservations";
 import { StarRating } from "@/components/books/StarRating";
 import { ReviewSection } from "@/components/books/ReviewSection";
 import { QRCodeView } from "@/components/books/QRCodeView";
+import { useBookWaitlist, useIsOnWaitlist, useJoinWaitlist, useLeaveWaitlist } from "@/hooks/use-waitlist";
 import { format } from "date-fns";
 import type { Book } from "@/hooks/use-books";
 
@@ -58,6 +59,10 @@ const BookDetail = () => {
   const isInList = useIsInReadingList(id!);
   const toggleList = useToggleReadingList();
   const createReservation = useCreateReservation();
+  const { data: waitlist } = useBookWaitlist(id!);
+  const waitlistEntry = useIsOnWaitlist(id!);
+  const joinWaitlist = useJoinWaitlist();
+  const leaveWaitlist = useLeaveWaitlist();
 
   if (isLoading) return <div className="p-12 text-center text-muted-foreground">Loading...</div>;
   if (!book) return <div className="p-12 text-center text-muted-foreground">Book not found.</div>;
@@ -123,14 +128,35 @@ const BookDetail = () => {
               {isInList ? "In Reading List" : "Add to Reading List"}
             </Button>
             {book.available_copies === 0 && user && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => createReservation.mutate({ book_id: book.id, user_id: user.id })}
-                disabled={createReservation.isPending}
-              >
-                <CalendarClock className="h-4 w-4 mr-2" />Reserve
-              </Button>
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => createReservation.mutate({ book_id: book.id, user_id: user.id })}
+                  disabled={createReservation.isPending}
+                >
+                  <CalendarClock className="h-4 w-4 mr-2" />Reserve
+                </Button>
+                {waitlistEntry ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => leaveWaitlist.mutate({ bookId: book.id, userId: user.id })}
+                    disabled={leaveWaitlist.isPending}
+                  >
+                    <Clock className="h-4 w-4 mr-2" />Leave Waitlist (#{waitlistEntry.position})
+                  </Button>
+                ) : (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => joinWaitlist.mutate({ bookId: book.id, userId: user.id })}
+                    disabled={joinWaitlist.isPending}
+                  >
+                    <Clock className="h-4 w-4 mr-2" />Join Waitlist{waitlist?.length ? ` (${waitlist.length} waiting)` : ""}
+                  </Button>
+                )}
+              </>
             )}
           </div>
 

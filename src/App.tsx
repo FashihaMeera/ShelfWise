@@ -22,6 +22,8 @@ import Login from "@/pages/Login";
 import Register from "@/pages/Register";
 import ResetPassword from "@/pages/ResetPassword";
 import NotFound from "@/pages/NotFound";
+import ReadingChallenges from "@/pages/ReadingChallenges";
+import BookRequests from "@/pages/BookRequests";
 
 const queryClient = new QueryClient();
 
@@ -53,6 +55,8 @@ const App = () => (
                 <Route path="/settings" element={<SettingsPage />} />
                 <Route path="/notifications" element={<NotificationsPage />} />
                 <Route path="/activity-log" element={<ActivityLog />} />
+                <Route path="/challenges" element={<ReadingChallenges />} />
+                <Route path="/requests" element={<BookRequests />} />
               </Route>
             </Route>
 

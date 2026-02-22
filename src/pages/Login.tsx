@@ -60,25 +60,34 @@ export default function Login() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4 relative">
-      <Button variant="ghost" size="icon" onClick={toggleTheme} className="absolute top-4 right-4">
+    <div className="flex min-h-screen items-center justify-center p-4 relative overflow-hidden">
+      {/* Warm ambient background */}
+      <div className="absolute inset-0 warm-gradient" />
+      <div className="absolute inset-0 bg-dots opacity-20" />
+
+      <Button variant="ghost" size="icon" onClick={toggleTheme} className="absolute top-4 right-4 z-10">
         {theme === "light" ? <Moon className="h-[18px] w-[18px]" /> : <Sun className="h-[18px] w-[18px]" />}
       </Button>
-      <Card className="w-full max-w-md glass animate-in-up">
-        <CardHeader className="text-center space-y-2">
+
+      <Card className="w-full max-w-md glass animate-in-up relative z-10">
+        <CardHeader className="text-center space-y-3 pb-2">
           <div className="flex justify-center">
-            <div className="flex items-center gap-2">
-              <Library className="h-8 w-8 text-primary" />
+            <Link to="/" className="flex items-center gap-2.5">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-md">
+                <Library className="h-5 w-5" />
+              </div>
               <span className="text-2xl font-bold tracking-tight">ShelfWise</span>
-            </div>
+            </Link>
           </div>
-          <CardTitle className="text-xl">Welcome back</CardTitle>
-          <CardDescription>Sign in to your account</CardDescription>
+          <div>
+            <CardTitle className="text-xl">Welcome back</CardTitle>
+            <CardDescription className="mt-1">Sign in to your library account</CardDescription>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <Button
             variant="outline"
-            className="w-full gap-2"
+            className="w-full gap-2 h-11"
             onClick={handleGoogle}
             disabled={googleLoading}
           >
@@ -95,7 +104,7 @@ export default function Login() {
 
           <div className="relative">
             <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border" /></div>
-            <div className="relative flex justify-center text-xs uppercase"><span className="bg-card px-2 text-muted-foreground">or</span></div>
+            <div className="relative flex justify-center text-xs uppercase"><span className="bg-card px-2 text-muted-foreground">or continue with email</span></div>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-3">
@@ -103,14 +112,14 @@ export default function Login() {
               <Label htmlFor="email">Email</Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input id="email" type="email" placeholder="you@example.com" className="pl-9" value={email} onChange={e => setEmail(e.target.value)} required />
+                <Input id="email" type="email" placeholder="you@example.com" className="pl-9 h-11" value={email} onChange={e => setEmail(e.target.value)} required />
               </div>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="password">Password</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input id="password" type="password" placeholder="••••••••" className="pl-9" value={password} onChange={e => setPassword(e.target.value)} required />
+                <Input id="password" type="password" placeholder="••••••••" className="pl-9 h-11" value={password} onChange={e => setPassword(e.target.value)} required />
               </div>
             </div>
             <div className="text-right">
@@ -118,12 +127,12 @@ export default function Login() {
                 Forgot password?
               </button>
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button type="submit" className="w-full h-11 glow-primary" disabled={loading}>
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Sign in"}
             </Button>
           </form>
         </CardContent>
-        <CardFooter className="justify-center">
+        <CardFooter className="justify-center pb-6">
           <p className="text-sm text-muted-foreground">
             Don't have an account?{" "}
             <Link to="/register" className="text-primary font-medium hover:underline">Sign up</Link>
