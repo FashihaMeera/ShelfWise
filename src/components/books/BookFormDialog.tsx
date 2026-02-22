@@ -6,6 +6,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAddBook, useUpdateBook, type Book } from "@/hooks/use-books";
+import { useISBNLookup } from "@/hooks/use-isbn-lookup";
+import { Loader2, Sparkles } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 const GENRES = ["Fiction", "Science", "History", "Technology", "Science Fiction", "Fantasy", "Psychology", "Business"];
 
@@ -18,6 +21,8 @@ interface Props {
 export function BookFormDialog({ open, onOpenChange, book }: Props) {
   const addBook = useAddBook();
   const updateBook = useUpdateBook();
+  const { lookup, isLoading: isbnLoading, error: isbnError } = useISBNLookup();
+  const { toast } = useToast();
   const isEdit = !!book;
 
   const [form, setForm] = useState({
@@ -38,6 +43,28 @@ export function BookFormDialog({ open, onOpenChange, book }: Props) {
       setForm({ title: "", author: "", isbn: "", genre: "", description: "", cover_image_url: "", publication_year: "", total_copies: "1" });
     }
   }, [book, open]);
+
+  const handleISBNAutoFill = async () => {
+    if (!form.isbn.trim()) {
+      toast({ title: "Enter an ISBN first", variant: "destructive" });
+      return;
+    }
+    const result = await lookup(form.isbn);
+    if (result) {
+      setForm((prev) => ({
+        ...prev,
+        title: result.title || prev.title,
+        author: result.author || prev.author,
+        description: result.description || prev.description,
+        cover_image_url: result.cover_image_url || prev.cover_image_url,
+        publication_year: result.publication_year || prev.publication_year,
+        genre: result.genre || prev.genre,
+      }));
+      toast({ title: "Book details auto-filled!", description: `Found: "${result.title}"` });
+    } else if (isbnError) {
+      toast({ title: "ISBN Lookup Failed", description: isbnError, variant: "destructive" });
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,11 +92,43 @@ export function BookFormDialog({ open, onOpenChange, book }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{isEdit ? "Edit Book" : "Add New Book"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* ISBN with Auto-Fill */}
+          <div className="space-y-2">
+            <Label htmlFor="isbn">ISBN</Label>
+            <div className="flex gap-2">
+              <Input
+                id="isbn"
+                value={form.isbn}
+                onChange={set("isbn")}
+                placeholder="e.g. 978-0061120084"
+                className="flex-1"
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={handleISBNAutoFill}
+                disabled={isbnLoading || !form.isbn.trim()}
+                className="shrink-0 gap-1.5"
+              >
+                {isbnLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Sparkles className="h-4 w-4" />
+                )}
+                Auto-Fill
+              </Button>
+            </div>
+            {isbnError && (
+              <p className="text-xs text-destructive">{isbnError}</p>
+            )}
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="title">Title *</Label>
@@ -82,10 +141,6 @@ export function BookFormDialog({ open, onOpenChange, book }: Props) {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="isbn">ISBN</Label>
-              <Input id="isbn" value={form.isbn} onChange={set("isbn")} />
-            </div>
-            <div className="space-y-2">
               <Label>Genre</Label>
               <Select value={form.genre} onValueChange={(v) => setForm((p) => ({ ...p, genre: v }))}>
                 <SelectTrigger><SelectValue placeholder="Select genre" /></SelectTrigger>
@@ -94,16 +149,14 @@ export function BookFormDialog({ open, onOpenChange, book }: Props) {
                 </SelectContent>
               </Select>
             </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="year">Publication Year</Label>
               <Input id="year" type="number" value={form.publication_year} onChange={set("publication_year")} />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="copies">Total Copies</Label>
-              <Input id="copies" type="number" min="1" value={form.total_copies} onChange={set("total_copies")} />
-            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="copies">Total Copies</Label>
+            <Input id="copies" type="number" min="1" value={form.total_copies} onChange={set("total_copies")} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="desc">Description</Label>

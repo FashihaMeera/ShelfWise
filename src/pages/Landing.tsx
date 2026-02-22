@@ -1,7 +1,8 @@
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Library, BookOpen, Users, BarChart3, Shield, ArrowRight, Sun, Moon } from "lucide-react";
 import { useTheme } from "@/hooks/use-theme";
+import { useAuth } from "@/contexts/AuthContext";
 
 const features = [
   { icon: BookOpen, title: "Catalog Management", desc: "Organize your entire book collection with powerful search and filters." },
@@ -12,6 +13,12 @@ const features = [
 
 export default function Landing() {
   const { theme, toggleTheme } = useTheme();
+  const { user, loading } = useAuth();
+
+  // If authenticated, redirect to dashboard
+  if (!loading && user) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   return (
     <div className="flex flex-col min-h-screen bg-background">

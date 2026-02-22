@@ -1,5 +1,6 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { ArrowLeft, BookOpen, Heart, CalendarClock } from "lucide-react";
+import { BookTagsDisplay } from "@/components/books/BookTagsDisplay";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -92,6 +93,9 @@ const BookDetail = () => {
               <Badge variant={book.available_copies > 0 ? "default" : "destructive"} className={book.available_copies > 0 ? "bg-[hsl(var(--success))] text-[hsl(var(--success-foreground))]" : ""}>
                 {book.available_copies}/{book.total_copies} available
               </Badge>
+            </div>
+            <div className="mt-3">
+              <BookTagsDisplay bookId={book.id} editable={isStaff} />
             </div>
             {count > 0 && (
               <div className="flex items-center gap-2 mt-3">
