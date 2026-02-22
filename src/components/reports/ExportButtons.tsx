@@ -1,0 +1,53 @@
+import { Button } from "@/components/ui/button";
+import { Download } from "lucide-react";
+
+function downloadCsv(filename: string, headers: string[], rows: string[][]) {
+  const csv = [headers.join(","), ...rows.map((r) => r.map((v) => `"${(v || "").replace(/"/g, '""')}"`).join(","))].join("\n");
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+interface ExportButtonsProps {
+  overdueData?: { book_title: string; member_name: string; due_date: string; days_overdue: number }[];
+  popularData?: { title: string; author: string; count: number }[];
+}
+
+export function ExportButtons({ overdueData, popularData }: ExportButtonsProps) {
+  const exportOverdue = () => {
+    if (!overdueData) return;
+    downloadCsv(
+      "overdue-books.csv",
+      ["Book", "Member", "Due Date", "Days Overdue"],
+      overdueData.map((r) => [r.book_title, r.member_name, r.due_date, String(r.days_overdue)])
+    );
+  };
+
+  const exportPopular = () => {
+    if (!popularData) return;
+    downloadCsv(
+      "popular-books.csv",
+      ["Title", "Author", "Times Borrowed"],
+      popularData.map((r) => [r.title, r.author, String(r.count)])
+    );
+  };
+
+  return (
+    <div className="flex gap-2 flex-wrap">
+      {overdueData && overdueData.length > 0 && (
+        <Button variant="outline" size="sm" onClick={exportOverdue}>
+          <Download className="h-4 w-4 mr-2" />Export Overdue
+        </Button>
+      )}
+      {popularData && popularData.length > 0 && (
+        <Button variant="outline" size="sm" onClick={exportPopular}>
+          <Download className="h-4 w-4 mr-2" />Export Popular
+        </Button>
+      )}
+    </div>
+  );
+}

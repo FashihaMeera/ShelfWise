@@ -1,60 +1,62 @@
-# Shelfwise — Smart Library Management (Scaffold)
+# ShelfWise Library Buddy
 
-This workspace contains a minimal scaffold for a Smart Library Management System:
+A modern **Library Management System** built with React, TypeScript, and Supabase.
 
-- `backend/` — FastAPI app with JWT-based auth and MongoDB (motor)
-- `frontend/` — Vue 3 (Vite) skeleton with login UI
+## Tech Stack
 
-Run backend:
+- **Frontend**: React 18 + TypeScript + Vite
+- **Styling**: Tailwind CSS + shadcn/ui
+- **Backend**: Supabase (PostgreSQL, Auth, Edge Functions)
+- **State**: TanStack React Query
+- **Routing**: React Router v6
+- **Charts**: Recharts
 
-```powershell
-Run locally (no Docker):
-python -m venv .venv
-.\.venv\Scripts\activate
-pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
-```
+## Getting Started
 
-Run frontend (after installing deps):
+### Prerequisites
+- Node.js (v18+) and npm
 
-```powershell
-1) Ensure MongoDB is running locally (default: `mongodb://localhost:27017`). You can:
-	- Install MongoDB Community on Windows and start the service, or
-	- Use a hosted MongoDB (Atlas) and set `MONGO_URI` accordingly.
+### Installation
 
-2) Start the backend:
+```sh
+# Clone the repository
+git clone <YOUR_GIT_URL>
 
-```powershell
-cd "backend"
-python -m venv .venv
-.\.venv\Scripts\activate
-pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
-```
+# Navigate to the project
+cd shelfwise-library-buddy
 
-3) Start the frontend:
-
-```powershell
-cd frontend
+# Install dependencies
 npm install
+
+# Start the development server
 npm run dev
 ```
-npm install
-Environment:
-- Copy `backend/.env.example` → `.env` and set `SECRET_KEY` before production.
-- API base URL default is `http://localhost:8000` (override with `VUE_APP_API_URL`).
-```
-What's included (scaffold):
-- JWT helpers in `backend/app/auth.py`
-- CRUD helpers in `backend/app/crud.py`
-- Basic register/login endpoints in `backend/app/main.py`
-- Vue 3 skeleton in `frontend/src` with `Login.vue` and `Dashboard.vue`
 
-Next steps: implement full RBAC, protected routes, role-specific dashboards, book/transaction models, and notification integrations.
-What's included (scaffold):
-- JWT helpers in `backend/app/auth.py`
-- CRUD helpers in `backend/app/crud.py`
-- Basic register/login endpoints in `backend/app/main.py`
-- Vue 3 skeleton in `frontend/src` with `Login.vue` and `Dashboard.vue`
+The app will be available at `http://localhost:8080`.
 
-Next steps: implement full RBAC, protected routes, role-specific dashboards, book/transaction models, Docker, and notification integrations.
+## Features
+
+- 📚 **Book Management** — Add, edit, delete, search, and filter books with CSV bulk import
+- 👥 **Member Management** — View members, manage roles, view profiles
+- 🔄 **Borrow / Return** — Issue and return books with due date tracking
+- 📅 **Reservations** — Reserve unavailable books with status workflow
+- 💰 **Fines** — Automatic overdue fine calculation, pay/waive fines
+- ⭐ **Reviews & Ratings** — Members can rate and review books
+- 📖 **Reading Lists** — Personal reading list for each member
+- 🔔 **Notifications** — In-app notification system
+- 📊 **Reports** — Borrowing trends, genre distribution, leaderboard with CSV/JSON export
+- 📋 **Activity Log** — Full audit trail of system actions
+- 🔐 **Role-Based Access** — Admin, Librarian, and Member roles
+- 🌙 **Dark Mode** — Theme toggle support
+- 📱 **Responsive** — Mobile-friendly with bottom navigation
+- 🔲 **QR Codes** — Generate QR codes for books
+
+## Scripts
+
+| Script | Description |
+|---|---|
+| `npm run dev` | Start development server |
+| `npm run build` | Build for production |
+| `npm run preview` | Preview production build |
+| `npm run test` | Run tests |
+| `npm run lint` | Lint the codebase |

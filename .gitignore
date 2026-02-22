@@ -48,6 +48,13 @@ backend/uploads/
 backend/data/
 
 # Ignore frontend build artifacts
+
+# Ignore environment files
+.env
+
+# Ignore all markdown files except README.md
+*.md
+!README.md
 frontend/node_modules/
 frontend/dist/
 frontend/.env
