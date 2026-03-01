@@ -42,6 +42,9 @@ class Profile(Base):
     id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
     full_name = Column(String)
     avatar_url = Column(String)
+    is_suspended = Column(Boolean, default=False)
+    suspension_reason = Column(Text)
+    suspended_at = Column(DateTime(timezone=True))
     created_at = Column(DateTime(timezone=True), default=utcnow)
     updated_at = Column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
@@ -87,6 +90,8 @@ class Borrowing(Base):
     due_date = Column(DateTime(timezone=True), nullable=False)
     returned_at = Column(DateTime(timezone=True))
     issued_by = Column(UUID(as_uuid=True), ForeignKey("profiles.id"))
+    renewal_count = Column(Integer, default=0)
+    last_renewed_at = Column(DateTime(timezone=True))
     created_at = Column(DateTime(timezone=True), default=utcnow)
 
     book = relationship("Book", foreign_keys=[book_id])
@@ -175,8 +180,12 @@ class Fine(Base):
     user_id = Column(UUID(as_uuid=True), nullable=False)
     amount = Column(Numeric(10, 2), nullable=False)
     paid = Column(Boolean, default=False)
+    paid_at = Column(DateTime(timezone=True))
+    payment_method = Column(String)  # stripe, cash, waived
+    stripe_payment_intent = Column(String)
     waived = Column(Boolean, default=False)
     waived_by = Column(UUID(as_uuid=True))
+    waived_at = Column(DateTime(timezone=True))
     created_at = Column(DateTime(timezone=True), default=utcnow)
 
     borrowing = relationship("Borrowing")
@@ -250,3 +259,33 @@ class BookRequest(Base):
     )
 
     member = relationship("Profile")
+
+class EmailLog(Base):
+    __tablename__ = "email_logs"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    recipient_email = Column(String, nullable=False)
+    recipient_name = Column(String)
+    subject = Column(String, nullable=False)
+    email_type = Column(String, nullable=False)  # due_date, overdue, reservation, fine_payment, etc.
+    status = Column(String, default="sent")  # sent, failed, bounced
+    user_id = Column(UUID(as_uuid=True), ForeignKey("profiles.id", ondelete="SET NULL"))
+    email_metadata = Column(JSON)  # Store additional data like book_id, fine_id, etc.
+    created_at = Column(DateTime(timezone=True), default=utcnow)
+
+
+class Payment(Base):
+    __tablename__ = "payments"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    fine_id = Column(UUID(as_uuid=True), ForeignKey("fines.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("profiles.id", ondelete="CASCADE"), nullable=False)
+    amount = Column(Numeric(10, 2), nullable=False)
+    payment_method = Column(String)  # stripe, cash, check
+    stripe_payment_intent = Column(String, unique=True)
+    status = Column(String, default="pending")  # pending, completed, failed, refunded
+    created_at = Column(DateTime(timezone=True), default=utcnow)
+    completed_at = Column(DateTime(timezone=True))
+
+    fine = relationship("Fine")
+    user = relationship("Profile")

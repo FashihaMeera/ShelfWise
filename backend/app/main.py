@@ -1,7 +1,6 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from app.config import get_settings
 from app.auth.router import router as auth_router
@@ -21,24 +20,22 @@ from app.routers.reading_challenges import router as reading_challenges_router
 from app.routers.waitlist import router as waitlist_router
 from app.routers.dashboard import router as dashboard_router
 from app.routers.reports import router as reports_router
+from app.routers.book_renewals import router as book_renewals_router
+from app.routers.payments import router as payments_router
+from app.routers.member_suspension import router as member_suspension_router
+from app.routers.analytics import router as analytics_router
+from app.routers.exports import router as exports_router
 from app.websocket import websocket_endpoint
-from app.services.overdue_service import check_overdue_books
-from app.services.email_service import send_due_date_reminders, send_overdue_alerts
 
 settings = get_settings()
-scheduler = AsyncIOScheduler()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Schedule background tasks
-    scheduler.add_job(check_overdue_books, "interval", hours=6, id="check_overdue")
-    scheduler.add_job(send_due_date_reminders, "cron", hour=8, id="due_reminders")
-    scheduler.add_job(send_overdue_alerts, "cron", hour=9, id="overdue_alerts")
-    scheduler.start()
-    print("ShelfWise API started. Scheduler running.")
+    # Startup
+    print("ShelfWise API started successfully.")
     yield
-    scheduler.shutdown()
+    # Shutdown
     print("ShelfWise API stopped.")
 
 
@@ -84,6 +81,11 @@ app.include_router(reading_challenges_router)
 app.include_router(waitlist_router)
 app.include_router(dashboard_router)
 app.include_router(reports_router)
+app.include_router(book_renewals_router)
+app.include_router(payments_router)
+app.include_router(member_suspension_router)
+app.include_router(analytics_router)
+app.include_router(exports_router)
 
 # WebSocket
 app.add_api_websocket_route("/api/ws/notifications", websocket_endpoint)

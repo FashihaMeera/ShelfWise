@@ -379,3 +379,134 @@ class LeaderboardEntry(BaseModel):
     name: str
     avatar: Optional[str] = None
     booksRead: int
+
+# ── Book Renewal ──────────────────────────────────────
+class RenewBookRequest(BaseModel):
+    borrowing_id: UUID
+
+
+class RenewBookResponse(BaseModel):
+    borrowing_id: UUID
+    new_due_date: datetime
+    renewal_count: int
+    message: str
+
+
+# ── Payments & Fines ──────────────────────────────────
+class PaymentCreate(BaseModel):
+    fine_id: UUID
+    payment_method: str  # stripe, cash, check
+
+
+class PaymentResponse(BaseModel):
+    id: UUID
+    fine_id: UUID
+    user_id: UUID
+    amount: float
+    payment_method: str
+    status: str
+    created_at: datetime
+    completed_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class FineWithPayments(BaseModel):
+    id: UUID
+    borrowing_id: UUID
+    user_id: UUID
+    amount: float
+    paid: bool
+    paid_at: Optional[datetime]
+    payment_method: Optional[str]
+    waived: bool
+    waived_at: Optional[datetime]
+    created_at: datetime
+    payments: list["PaymentResponse"] = []
+
+    class Config:
+        from_attributes = True
+
+
+# ── Email Logging ─────────────────────────────────────
+class EmailLogCreate(BaseModel):
+    recipient_email: str
+    recipient_name: Optional[str]
+    subject: str
+    email_type: str
+    user_id: Optional[UUID] = None
+    email_metadata: Optional[dict] = None
+
+
+class EmailLogResponse(BaseModel):
+    id: UUID
+    recipient_email: str
+    recipient_name: Optional[str]
+    subject: str
+    email_type: str
+    status: str
+    user_id: Optional[UUID]
+    email_metadata: Optional[dict] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# ── Member Suspension ─────────────────────────────────
+class SuspendMemberRequest(BaseModel):
+    user_id: UUID
+    reason: str
+
+
+class SuspendMemberResponse(BaseModel):
+    user_id: UUID
+    is_suspended: bool
+    suspension_reason: Optional[str]
+    suspended_at: Optional[datetime]
+
+
+class UnsuspendMemberRequest(BaseModel):
+    user_id: UUID
+
+
+# ── Advanced Analytics ────────────────────────────────
+class BookAnalytics(BaseModel):
+    id: UUID
+    title: str
+    author: str
+    genre: Optional[str]
+    total_borrows: int
+    completed_borrows: int
+    avg_borrow_days: Optional[float]
+    borrows_last_30_days: int
+    avg_rating: Optional[float]
+    review_count: int
+
+    class Config:
+        from_attributes = True
+
+
+class MemberReadingAnalytics(BaseModel):
+    id: UUID
+    full_name: Optional[str]
+    total_books_borrowed: int
+    books_returned: int
+    books_currently_borrowed: int
+    books_borrowed_last_30_days: int
+    avg_books_rating: Optional[float]
+    books_reviewed: int
+
+    class Config:
+        from_attributes = True
+
+
+# ── Search Filters ────────────────────────────────────
+class BookSearchFilters(BaseModel):
+    search: Optional[str] = None
+    genre: Optional[str] = None
+    min_rating: Optional[float] = None
+    publication_year: Optional[int] = None
+    available_only: bool = True
+    sort_by: Optional[str] = None  # title, author, rating, popularity
