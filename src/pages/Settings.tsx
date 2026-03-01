@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { authApi } from "@/lib/api-client";
 import { useToast } from "@/hooks/use-toast";
 import { useLibrarySettings, useUpdateSetting } from "@/hooks/use-library-settings";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -38,15 +38,16 @@ const SettingsPage = () => {
   const handleProfileSave = async () => {
     if (!user) return;
     setProfileSaving(true);
-    const { error } = await supabase.from("profiles").update({
-      full_name: fullName,
-      avatar_url: avatarUrl || null,
-    }).eq("id", user.id);
-    setProfileSaving(false);
-    if (error) {
-      toast({ title: "Failed to update profile", description: error.message, variant: "destructive" });
-    } else {
+    try {
+      await authApi.updateProfile({
+        full_name: fullName,
+        avatar_url: avatarUrl || undefined,
+      });
       toast({ title: "Profile updated" });
+    } catch (err: any) {
+      toast({ title: "Failed to update profile", description: err.message, variant: "destructive" });
+    } finally {
+      setProfileSaving(false);
     }
   };
 
@@ -60,14 +61,15 @@ const SettingsPage = () => {
       return;
     }
     setPasswordSaving(true);
-    const { error } = await supabase.auth.updateUser({ password: newPassword });
-    setPasswordSaving(false);
-    if (error) {
-      toast({ title: "Failed to change password", description: error.message, variant: "destructive" });
-    } else {
+    try {
+      await authApi.updatePassword(newPassword);
       toast({ title: "Password changed successfully" });
       setNewPassword("");
       setConfirmPassword("");
+    } catch (err: any) {
+      toast({ title: "Failed to change password", description: err.message, variant: "destructive" });
+    } finally {
+      setPasswordSaving(false);
     }
   };
 

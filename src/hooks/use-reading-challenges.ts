@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api-client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -18,15 +18,7 @@ export function useReadingChallenges() {
     return useQuery({
         queryKey: ["reading-challenges", user?.id],
         enabled: !!user,
-        queryFn: async () => {
-            const { data, error } = await supabase
-                .from("reading_challenges" as any)
-                .select("*")
-                .eq("user_id", user!.id)
-                .order("created_at", { ascending: false });
-            if (error) throw error;
-            return (data || []) as unknown as ReadingChallenge[];
-        },
+        queryFn: () => api.get<ReadingChallenge[]>("/api/reading-challenges"),
     });
 }
 
@@ -36,17 +28,10 @@ export function useBooksReadInRange(startDate: string, endDate: string) {
     return useQuery({
         queryKey: ["books-read", user?.id, startDate, endDate],
         enabled: !!user && !!startDate && !!endDate,
-        queryFn: async () => {
-            const { count, error } = await supabase
-                .from("borrowings")
-                .select("*", { count: "exact", head: true })
-                .eq("user_id", user!.id)
-                .not("returned_at", "is", null)
-                .gte("returned_at", startDate)
-                .lte("returned_at", endDate + "T23:59:59");
-            if (error) throw error;
-            return count || 0;
-        },
+        queryFn: () =>
+            api.get<number>(
+                `/api/reading-challenges/books-count?start_date=${startDate}&end_date=${endDate}`
+            ),
     });
 }
 
@@ -55,10 +40,7 @@ export function useCreateChallenge() {
     const { toast } = useToast();
     return useMutation({
         mutationFn: async (challenge: { user_id: string; title: string; target_books: number; start_date: string; end_date: string }) => {
-            const { error } = await supabase
-                .from("reading_challenges" as any)
-                .insert(challenge as any);
-            if (error) throw error;
+            await api.post("/api/reading-challenges", challenge);
         },
         onSuccess: () => {
             qc.invalidateQueries({ queryKey: ["reading-challenges"] });
@@ -73,11 +55,7 @@ export function useDeleteChallenge() {
     const { toast } = useToast();
     return useMutation({
         mutationFn: async (id: string) => {
-            const { error } = await supabase
-                .from("reading_challenges" as any)
-                .delete()
-                .eq("id", id);
-            if (error) throw error;
+            await api.delete(`/api/reading-challenges/${id}`);
         },
         onSuccess: () => {
             qc.invalidateQueries({ queryKey: ["reading-challenges"] });

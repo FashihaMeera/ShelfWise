@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { RoleSelector } from "@/components/members/RoleSelector";
 import { FinesTab } from "@/components/members/FinesTab";
@@ -17,14 +17,7 @@ import { format } from "date-fns";
 function useMemberDetail(id: string) {
   return useQuery({
     queryKey: ["member-detail", id],
-    queryFn: async () => {
-      const [profileRes, roleRes] = await Promise.all([
-        supabase.from("profiles").select("*").eq("id", id).single(),
-        supabase.from("user_roles").select("role").eq("user_id", id).single(),
-      ]);
-      if (profileRes.error) throw profileRes.error;
-      return { ...profileRes.data, role: roleRes.data?.role || "member" };
-    },
+    queryFn: () => api.get<any>(`/api/members/${id}`),
     enabled: !!id,
   });
 }
@@ -32,15 +25,7 @@ function useMemberDetail(id: string) {
 function useMemberBorrowings(userId: string) {
   return useQuery({
     queryKey: ["member-borrowings", userId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("borrowings")
-        .select("*, books(title, author)")
-        .eq("user_id", userId)
-        .order("borrowed_at", { ascending: false });
-      if (error) throw error;
-      return data.map((b: any) => ({ ...b, book_title: b.books?.title, book_author: b.books?.author }));
-    },
+    queryFn: () => api.get<any[]>(`/api/borrowings?user_id=${userId}`),
     enabled: !!userId,
   });
 }
@@ -48,15 +33,7 @@ function useMemberBorrowings(userId: string) {
 function useMemberReservations(userId: string) {
   return useQuery({
     queryKey: ["member-reservations", userId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("reservations")
-        .select("*, books(title, author)")
-        .eq("user_id", userId)
-        .order("reserved_at", { ascending: false });
-      if (error) throw error;
-      return data.map((r: any) => ({ ...r, book_title: r.books?.title }));
-    },
+    queryFn: () => api.get<any[]>(`/api/reservations?user_id=${userId}`),
     enabled: !!userId,
   });
 }

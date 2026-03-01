@@ -1,7 +1,7 @@
 import { Link, Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Library, BookOpen, Users, BarChart3, Shield, ArrowRight, Sun, Moon, Sparkles } from "lucide-react";
-import { useTheme } from "@/hooks/use-theme";
+import { useTheme } from "@/contexts/ThemeContext";
 import { useAuth } from "@/contexts/AuthContext";
 
 const features = [

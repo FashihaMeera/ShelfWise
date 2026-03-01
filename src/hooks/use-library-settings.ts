@@ -1,17 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api-client";
 import { useToast } from "@/hooks/use-toast";
 
 export function useLibrarySettings() {
   return useQuery({
     queryKey: ["library-settings"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("library_settings").select("key, value");
-      if (error) throw error;
-      const map: Record<string, string> = {};
-      data.forEach((s) => { map[s.key] = s.value; });
-      return map;
-    },
+    queryFn: () => api.get<Record<string, string>>("/api/settings"),
   });
 }
 
@@ -20,11 +14,7 @@ export function useUpdateSetting() {
   const { toast } = useToast();
   return useMutation({
     mutationFn: async ({ key, value }: { key: string; value: string }) => {
-      const { error } = await supabase
-        .from("library_settings")
-        .update({ value, updated_at: new Date().toISOString() })
-        .eq("key", key);
-      if (error) throw error;
+      await api.put(`/api/settings/${key}`, { value });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["library-settings"] });

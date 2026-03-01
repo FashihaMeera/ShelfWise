@@ -1,6 +1,5 @@
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
-import type { User, Session } from "@supabase/supabase-js";
-import { supabase } from "@/integrations/supabase/client";
+import { authApi, getAccessToken, clearTokens, type AuthUser } from "@/lib/api-client";
 
 type AppRole = "admin" | "librarian" | "member";
 
@@ -10,81 +9,76 @@ interface Profile {
   avatar_url: string | null;
 }
 
+/** Minimal user shape expected by the rest of the app */
+interface AppUser {
+  id: string;
+  email: string;
+}
+
 interface AuthContextValue {
-  user: User | null;
-  session: Session | null;
+  user: AppUser | null;
   profile: Profile | null;
   role: AppRole | null;
   loading: boolean;
-  signOut: () => Promise<void>;
+  /** Re-fetch user data from /auth/me */
+  refreshUser: () => Promise<void>;
+  signOut: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue>({
   user: null,
-  session: null,
   profile: null,
   role: null,
   loading: true,
-  signOut: async () => {},
+  refreshUser: async () => {},
+  signOut: () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [session, setSession] = useState<Session | null>(null);
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AppUser | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [role, setRole] = useState<AppRole | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchUserData = useCallback(async (userId: string) => {
-    const [profileRes, roleRes] = await Promise.all([
-      supabase.from("profiles").select("id, full_name, avatar_url").eq("id", userId).single(),
-      supabase.from("user_roles").select("role").eq("user_id", userId).single(),
-    ]);
-    if (profileRes.data) setProfile(profileRes.data);
-    if (roleRes.data) setRole(roleRes.data.role as AppRole);
+  const hydrateFromApi = useCallback(async () => {
+    try {
+      const me: AuthUser = await authApi.getMe();
+      setUser({ id: me.id, email: me.email });
+      setProfile({ id: me.id, full_name: me.full_name, avatar_url: me.avatar_url });
+      setRole((me.role as AppRole) || "member");
+    } catch {
+      // Token invalid / expired / missing — clean up
+      clearTokens();
+      setUser(null);
+      setProfile(null);
+      setRole(null);
+    }
   }, []);
 
   useEffect(() => {
-    // Set up auth listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, newSession) => {
-        setSession(newSession);
-        setUser(newSession?.user ?? null);
-
-        if (newSession?.user) {
-          // Use setTimeout to avoid Supabase client deadlock
-          setTimeout(() => fetchUserData(newSession.user.id), 0);
-        } else {
-          setProfile(null);
-          setRole(null);
-        }
-        setLoading(false);
-      }
-    );
-
-    // THEN check existing session
-    supabase.auth.getSession().then(({ data: { session: existingSession } }) => {
-      setSession(existingSession);
-      setUser(existingSession?.user ?? null);
-      if (existingSession?.user) {
-        fetchUserData(existingSession.user.id);
-      }
+    const token = getAccessToken();
+    if (token) {
+      hydrateFromApi().finally(() => setLoading(false));
+    } else {
       setLoading(false);
-    });
+    }
+  }, [hydrateFromApi]);
 
-    return () => subscription.unsubscribe();
-  }, [fetchUserData]);
+  const refreshUser = useCallback(async () => {
+    await hydrateFromApi();
+  }, [hydrateFromApi]);
 
-  const signOut = async () => {
-    await supabase.auth.signOut();
+  const signOut = useCallback(() => {
+    clearTokens();
+    setUser(null);
     setProfile(null);
     setRole(null);
-  };
+  }, []);
 
   return (
-    <AuthContext.Provider value={{ user, session, profile, role, loading, signOut }}>
+    <AuthContext.Provider value={{ user, profile, role, loading, refreshUser, signOut }}>
       {children}
     </AuthContext.Provider>
   );

@@ -5,9 +5,9 @@ type Theme = "light" | "dark";
 export function useTheme() {
   const [theme, setThemeState] = useState<Theme>(() => {
     if (typeof window !== "undefined") {
-      return (localStorage.getItem("shelfwise-theme") as Theme) || "light";
+      return (localStorage.getItem("shelfwise-theme") as Theme) || "dark";
     }
-    return "light";
+    return "dark";
   });
 
   useEffect(() => {

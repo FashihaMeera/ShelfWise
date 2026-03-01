@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api-client";
 import { useToast } from "@/hooks/use-toast";
 
 export interface BookRequest {
@@ -18,14 +18,10 @@ export function useBookRequests(type?: string) {
     return useQuery({
         queryKey: ["book-requests", type],
         queryFn: async () => {
-            let query = supabase
-                .from("book_requests" as any)
-                .select("*, profiles(full_name)")
-                .order("created_at", { ascending: false });
-            if (type) query = query.eq("type", type);
-            const { data, error } = await query;
-            if (error) throw error;
-            return (data || []) as unknown as BookRequest[];
+            const params = new URLSearchParams();
+            if (type) params.set("type", type);
+            const qs = params.toString();
+            return api.get<BookRequest[]>(`/api/book-requests${qs ? `?${qs}` : ""}`);
         },
     });
 }
@@ -35,10 +31,7 @@ export function useCreateBookRequest() {
     const { toast } = useToast();
     return useMutation({
         mutationFn: async (req: { user_id: string; title: string; author?: string; reason?: string; type: string }) => {
-            const { error } = await supabase
-                .from("book_requests" as any)
-                .insert(req as any);
-            if (error) throw error;
+            await api.post("/api/book-requests", req);
         },
         onSuccess: () => {
             qc.invalidateQueries({ queryKey: ["book-requests"] });
@@ -53,11 +46,7 @@ export function useUpdateBookRequestStatus() {
     const { toast } = useToast();
     return useMutation({
         mutationFn: async ({ id, status }: { id: string; status: string }) => {
-            const { error } = await supabase
-                .from("book_requests" as any)
-                .update({ status } as any)
-                .eq("id", id);
-            if (error) throw error;
+            await api.put(`/api/book-requests/${id}`, { status });
         },
         onSuccess: () => {
             qc.invalidateQueries({ queryKey: ["book-requests"] });

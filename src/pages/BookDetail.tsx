@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsInReadingList, useToggleReadingList } from "@/hooks/use-reading-list";
 import { useAverageRating } from "@/hooks/use-reviews";
@@ -21,11 +21,7 @@ import type { Book } from "@/hooks/use-books";
 function useBookDetail(id: string) {
   return useQuery({
     queryKey: ["book-detail", id],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("books").select("*").eq("id", id).single();
-      if (error) throw error;
-      return data as Book;
-    },
+    queryFn: () => api.get<Book>(`/api/books/${id}`),
     enabled: !!id,
   });
 }
@@ -33,16 +29,8 @@ function useBookDetail(id: string) {
 function useBookBorrowingHistory(bookId: string) {
   return useQuery({
     queryKey: ["book-borrowing-history", bookId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("borrowings")
-        .select("*, profiles!borrowings_user_id_fkey(full_name)")
-        .eq("book_id", bookId)
-        .order("borrowed_at", { ascending: false })
-        .limit(20);
-      if (error) throw error;
-      return data.map((b: any) => ({ ...b, member_name: b.profiles?.full_name || "Unknown" }));
-    },
+    queryFn: () =>
+      api.get<any[]>(`/api/borrowings?book_id=${bookId}`),
     enabled: !!bookId,
   });
 }

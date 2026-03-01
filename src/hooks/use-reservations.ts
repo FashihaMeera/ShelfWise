@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api-client";
 import { useToast } from "@/hooks/use-toast";
 
 export interface Reservation {
@@ -20,24 +20,10 @@ export function useReservations(statusFilter?: string) {
   return useQuery({
     queryKey: ["reservations", statusFilter],
     queryFn: async () => {
-      let query = supabase
-        .from("reservations")
-        .select("*, books(title, author), profiles!reservations_user_id_fkey(full_name)")
-        .order("reserved_at", { ascending: false });
-
-      if (statusFilter && statusFilter !== "all") {
-        query = query.eq("status", statusFilter);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-
-      return data.map((r: any) => ({
-        ...r,
-        book_title: r.books?.title,
-        book_author: r.books?.author,
-        member_name: r.profiles?.full_name,
-      })) as Reservation[];
+      const params = new URLSearchParams();
+      if (statusFilter && statusFilter !== "all") params.set("status", statusFilter);
+      const qs = params.toString();
+      return api.get<Reservation[]>(`/api/reservations${qs ? `?${qs}` : ""}`);
     },
   });
 }
@@ -47,8 +33,7 @@ export function useCreateReservation() {
   const { toast } = useToast();
   return useMutation({
     mutationFn: async (data: { book_id: string; user_id: string }) => {
-      const { error } = await supabase.from("reservations").insert(data);
-      if (error) throw error;
+      await api.post("/api/reservations", data);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["reservations"] });
@@ -63,8 +48,7 @@ export function useUpdateReservation() {
   const { toast } = useToast();
   return useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const { error } = await supabase.from("reservations").update({ status }).eq("id", id);
-      if (error) throw error;
+      await api.put(`/api/reservations/${id}`, { status });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["reservations"] });
@@ -79,8 +63,7 @@ export function useCancelReservation() {
   const { toast } = useToast();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("reservations").update({ status: "cancelled" }).eq("id", id);
-      if (error) throw error;
+      await api.delete(`/api/reservations/${id}`);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["reservations"] });

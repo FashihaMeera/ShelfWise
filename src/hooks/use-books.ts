@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api-client";
 import { useToast } from "@/hooks/use-toast";
 
 export interface Book {
@@ -25,16 +25,11 @@ export function useBooks(search?: string, genre?: string) {
   return useQuery({
     queryKey: ["books", search, genre],
     queryFn: async () => {
-      let query = supabase.from("books").select("*").order("title");
-      if (search) {
-        query = query.or(`title.ilike.%${search}%,author.ilike.%${search}%,isbn.ilike.%${search}%`);
-      }
-      if (genre) {
-        query = query.eq("genre", genre);
-      }
-      const { data, error } = await query;
-      if (error) throw error;
-      return data as Book[];
+      const params = new URLSearchParams();
+      if (search) params.set("search", search);
+      if (genre) params.set("genre", genre);
+      const qs = params.toString();
+      return api.get<Book[]>(`/api/books${qs ? `?${qs}` : ""}`);
     },
   });
 }
@@ -42,16 +37,7 @@ export function useBooks(search?: string, genre?: string) {
 export function useBookGenres() {
   return useQuery({
     queryKey: ["book-genres"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("books")
-        .select("genre")
-        .not("genre", "is", null)
-        .order("genre");
-      if (error) throw error;
-      const genres = [...new Set(data.map((b) => b.genre as string))];
-      return genres;
-    },
+    queryFn: () => api.get<string[]>("/api/books/genres"),
   });
 }
 
@@ -60,12 +46,10 @@ export function useAddBook() {
   const { toast } = useToast();
   return useMutation({
     mutationFn: async (book: BookInsert) => {
-      const { data, error } = await supabase.from("books").insert({
+      return api.post<Book>("/api/books", {
         ...book,
         available_copies: book.available_copies ?? book.total_copies,
-      }).select().single();
-      if (error) throw error;
-      return data;
+      });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["books"] });
@@ -81,8 +65,7 @@ export function useUpdateBook() {
   const { toast } = useToast();
   return useMutation({
     mutationFn: async ({ id, ...book }: Partial<Book> & { id: string }) => {
-      const { error } = await supabase.from("books").update(book).eq("id", id);
-      if (error) throw error;
+      await api.put(`/api/books/${id}`, book);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["books"] });
@@ -98,8 +81,7 @@ export function useDeleteBook() {
   const { toast } = useToast();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("books").delete().eq("id", id);
-      if (error) throw error;
+      await api.delete(`/api/books/${id}`);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["books"] });

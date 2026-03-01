@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api, createNotificationSocket } from "@/lib/api-client";
 import { useEffect } from "react";
 
 export interface Notification {
@@ -16,33 +16,18 @@ export interface Notification {
 export function useNotifications() {
   const qc = useQueryClient();
 
-  // Subscribe to realtime notifications
+  // Subscribe to WebSocket notifications
   useEffect(() => {
-    const channel = supabase
-      .channel("notifications-realtime")
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "notifications" },
-        () => {
-          qc.invalidateQueries({ queryKey: ["notifications"] });
-        }
-      )
-      .subscribe();
+    const ws = createNotificationSocket(() => {
+      qc.invalidateQueries({ queryKey: ["notifications"] });
+    });
 
-    return () => { supabase.removeChannel(channel); };
+    return () => { ws?.close(); };
   }, [qc]);
 
   return useQuery({
     queryKey: ["notifications"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("notifications")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(50);
-      if (error) throw error;
-      return data as Notification[];
-    },
+    queryFn: () => api.get<Notification[]>("/api/notifications"),
   });
 }
 
@@ -55,8 +40,7 @@ export function useMarkAsRead() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("notifications").update({ read: true }).eq("id", id);
-      if (error) throw error;
+      await api.put(`/api/notifications/${id}/read`);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }),
   });
@@ -66,8 +50,7 @@ export function useMarkAllAsRead() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("notifications").update({ read: true }).eq("read", false);
-      if (error) throw error;
+      await api.put("/api/notifications/read-all");
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }),
   });
@@ -77,8 +60,7 @@ export function useClearNotifications() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("notifications").delete().eq("read", true);
-      if (error) throw error;
+      await api.delete("/api/notifications/clear-read");
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }),
   });

@@ -1,13 +1,16 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { useState, useCallback } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { authApi, setTokens } from "@/lib/api-client";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Library, Mail, Lock, User, Loader2, Sun, Moon, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useTheme } from "@/hooks/use-theme";
+import { useTheme } from "@/contexts/ThemeContext";
+
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
 
 export default function Register() {
   const { theme, toggleTheme } = useTheme();
@@ -16,8 +19,9 @@ export default function Register() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const { refreshUser } = useAuth();
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,56 +30,65 @@ export default function Register() {
       return;
     }
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { full_name: fullName },
-        emailRedirectTo: window.location.origin,
-      },
-    });
-    setLoading(false);
-    if (error) {
-      toast({ variant: "destructive", title: "Sign up failed", description: error.message });
-    } else {
-      setSuccess(true);
+    try {
+      const res = await authApi.register(email, password, fullName);
+      setTokens(res.access_token, res.refresh_token);
+      await refreshUser();
+      navigate("/dashboard");
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Sign up failed", description: err.message });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleGoogle = async () => {
+  const handleGoogleCallback = useCallback(async (credential: string) => {
     setGoogleLoading(true);
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: window.location.origin,
+    try {
+      const res = await authApi.googleAuth(credential);
+      setTokens(res.access_token, res.refresh_token);
+      await refreshUser();
+      navigate("/dashboard");
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Google sign-up failed", description: err.message });
+    } finally {
+      setGoogleLoading(false);
+    }
+  }, [navigate, refreshUser, toast]);
+
+  const handleGoogle = useCallback(() => {
+    if (!GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID === "YOUR_GOOGLE_CLIENT_ID_HERE") {
+      toast({ variant: "destructive", title: "Google Sign-In not configured", description: "Set VITE_GOOGLE_CLIENT_ID in your .env file." });
+      return;
+    }
+
+    if (!window.google?.accounts) {
+      toast({ variant: "destructive", title: "Google SDK not loaded", description: "Please refresh the page and try again." });
+      return;
+    }
+
+    setGoogleLoading(true);
+    window.google.accounts.id.initialize({
+      client_id: GOOGLE_CLIENT_ID,
+      callback: (response: { credential?: string }) => {
+        if (response.credential) {
+          handleGoogleCallback(response.credential);
+        } else {
+          setGoogleLoading(false);
+          toast({ variant: "destructive", title: "Google sign-up failed", description: "No credential received." });
+        }
       },
     });
-    setGoogleLoading(false);
-    if (error) {
-      toast({ variant: "destructive", title: "Google sign-in failed", description: error.message });
-    }
-  };
-
-  if (success) {
-    return (
-      <div className="flex min-h-screen items-center justify-center p-4 relative overflow-hidden">
-        <div className="absolute inset-0 warm-gradient" />
-        <div className="absolute inset-0 bg-dots opacity-20" />
-        <Card className="w-full max-w-md glass animate-in-up text-center relative z-10">
-          <CardHeader className="space-y-3">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 mx-auto">
-              <CheckCircle2 className="h-7 w-7 text-primary" />
-            </div>
-            <CardTitle className="text-xl">Check your email</CardTitle>
-            <CardDescription>We sent a confirmation link to <strong>{email}</strong>. Click it to activate your account.</CardDescription>
-          </CardHeader>
-          <CardFooter className="justify-center pb-6">
-            <Link to="/login" className="text-primary text-sm font-medium hover:underline">Back to login</Link>
-          </CardFooter>
-        </Card>
-      </div>
-    );
-  }
+    window.google.accounts.id.prompt((notification: { isNotDisplayed: () => boolean; isSkippedMoment: () => boolean }) => {
+      if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+        setGoogleLoading(false);
+        const redirectUri = `${window.location.origin}/auth/callback`;
+        const scope = "openid email profile";
+        const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${GOOGLE_CLIENT_ID}&redirect_uri=${redirectUri}&response_type=token id_token&scope=${scope}&nonce=${crypto.randomUUID()}`;
+        window.location.href = url;
+      }
+    });
+  }, [handleGoogleCallback, toast]);
 
   return (
     <div className="flex min-h-screen items-center justify-center p-4 relative overflow-hidden">

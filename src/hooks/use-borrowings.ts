@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api-client";
 import { useToast } from "@/hooks/use-toast";
 
 export interface Borrowing {
@@ -20,34 +20,10 @@ export function useBorrowings(statusFilter?: "active" | "returned" | "overdue" |
   return useQuery({
     queryKey: ["borrowings", statusFilter],
     queryFn: async () => {
-      let query = supabase
-        .from("borrowings")
-        .select("*, books(title, author), profiles!borrowings_user_id_fkey(full_name)")
-        .order("borrowed_at", { ascending: false });
-
-      if (statusFilter === "active") {
-        query = query.is("returned_at", null);
-      } else if (statusFilter === "returned") {
-        query = query.not("returned_at", "is", null);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-
-      let results = data.map((b: any) => ({
-        ...b,
-        book_title: b.books?.title,
-        book_author: b.books?.author,
-        member_name: b.profiles?.full_name,
-      }));
-
-      if (statusFilter === "overdue") {
-        results = results.filter(
-          (b) => !b.returned_at && new Date(b.due_date) < new Date()
-        );
-      }
-
-      return results as Borrowing[];
+      const params = new URLSearchParams();
+      if (statusFilter && statusFilter !== "all") params.set("status", statusFilter);
+      const qs = params.toString();
+      return api.get<Borrowing[]>(`/api/borrowings${qs ? `?${qs}` : ""}`);
     },
   });
 }
@@ -57,8 +33,7 @@ export function useIssueBorrow() {
   const { toast } = useToast();
   return useMutation({
     mutationFn: async (data: { book_id: string; user_id: string; due_date: string; issued_by: string }) => {
-      const { error } = await supabase.from("borrowings").insert(data);
-      if (error) throw error;
+      await api.post("/api/borrowings", data);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["borrowings"] });
@@ -76,11 +51,7 @@ export function useReturnBook() {
   const { toast } = useToast();
   return useMutation({
     mutationFn: async (borrowingId: string) => {
-      const { error } = await supabase
-        .from("borrowings")
-        .update({ returned_at: new Date().toISOString() })
-        .eq("id", borrowingId);
-      if (error) throw error;
+      await api.put(`/api/borrowings/${borrowingId}/return`);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["borrowings"] });

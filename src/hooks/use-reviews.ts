@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api-client";
 import { useToast } from "@/hooks/use-toast";
 
 export interface Review {
@@ -17,28 +17,7 @@ export interface Review {
 export function useBookReviews(bookId: string) {
   return useQuery({
     queryKey: ["book-reviews", bookId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("book_reviews")
-        .select("*, profiles!book_reviews_user_id_fkey(full_name, avatar_url)")
-        .eq("book_id", bookId)
-        .order("created_at", { ascending: false });
-      if (error) {
-        // If FK doesn't exist, fallback
-        const { data: d2, error: e2 } = await supabase
-          .from("book_reviews")
-          .select("*")
-          .eq("book_id", bookId)
-          .order("created_at", { ascending: false });
-        if (e2) throw e2;
-        return d2 as Review[];
-      }
-      return data.map((r: any) => ({
-        ...r,
-        reviewer_name: r.profiles?.full_name || "Anonymous",
-        reviewer_avatar: r.profiles?.avatar_url,
-      })) as Review[];
-    },
+    queryFn: () => api.get<Review[]>(`/api/reviews/${bookId}`),
     enabled: !!bookId,
   });
 }
@@ -55,8 +34,7 @@ export function useAddReview() {
   const { toast } = useToast();
   return useMutation({
     mutationFn: async (data: { book_id: string; user_id: string; rating: number; review_text?: string }) => {
-      const { error } = await supabase.from("book_reviews").insert(data);
-      if (error) throw error;
+      await api.post("/api/reviews", data);
     },
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ["book-reviews", vars.book_id] });
@@ -71,8 +49,7 @@ export function useDeleteReview() {
   const { toast } = useToast();
   return useMutation({
     mutationFn: async ({ id, bookId }: { id: string; bookId: string }) => {
-      const { error } = await supabase.from("book_reviews").delete().eq("id", id);
-      if (error) throw error;
+      await api.delete(`/api/reviews/${id}`);
       return bookId;
     },
     onSuccess: (bookId) => {

@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api-client";
 import { useToast } from "@/hooks/use-toast";
 
 export interface Fine {
@@ -19,23 +19,10 @@ export function useFines(userId?: string) {
   return useQuery({
     queryKey: ["fines", userId],
     queryFn: async () => {
-      let query = supabase
-        .from("fines")
-        .select("*, borrowings(book_id, books(title), profiles!borrowings_user_id_fkey(full_name))")
-        .order("created_at", { ascending: false });
-
-      if (userId) {
-        query = query.eq("user_id", userId);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-
-      return data.map((f: any) => ({
-        ...f,
-        book_title: f.borrowings?.books?.title || "Unknown",
-        member_name: f.borrowings?.profiles?.full_name || "Unknown",
-      })) as Fine[];
+      const params = new URLSearchParams();
+      if (userId) params.set("user_id", userId);
+      const qs = params.toString();
+      return api.get<Fine[]>(`/api/fines${qs ? `?${qs}` : ""}`);
     },
   });
 }
@@ -53,11 +40,7 @@ export function useWaiveFine() {
   const { toast } = useToast();
   return useMutation({
     mutationFn: async ({ id, waivedBy }: { id: string; waivedBy: string }) => {
-      const { error } = await supabase
-        .from("fines")
-        .update({ waived: true, waived_by: waivedBy })
-        .eq("id", id);
-      if (error) throw error;
+      await api.put(`/api/fines/${id}/waive`, { waived_by: waivedBy });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["fines"] });
@@ -72,11 +55,7 @@ export function useMarkFinePaid() {
   const { toast } = useToast();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from("fines")
-        .update({ paid: true })
-        .eq("id", id);
-      if (error) throw error;
+      await api.put(`/api/fines/${id}/pay`);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["fines"] });

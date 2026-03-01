@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api-client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -17,15 +17,7 @@ export function useBookWaitlist(bookId: string | undefined) {
     return useQuery({
         queryKey: ["waitlist", bookId],
         enabled: !!bookId,
-        queryFn: async () => {
-            const { data, error } = await supabase
-                .from("waitlist" as any)
-                .select("*")
-                .eq("book_id", bookId!)
-                .order("position", { ascending: true });
-            if (error) throw error;
-            return (data || []) as unknown as WaitlistEntry[];
-        },
+        queryFn: () => api.get<WaitlistEntry[]>(`/api/waitlist/${bookId}`),
     });
 }
 
@@ -42,19 +34,7 @@ export function useJoinWaitlist() {
     const { toast } = useToast();
     return useMutation({
         mutationFn: async ({ bookId, userId }: { bookId: string; userId: string }) => {
-            // Get current max position
-            const { data: existing } = await supabase
-                .from("waitlist" as any)
-                .select("position")
-                .eq("book_id", bookId)
-                .order("position", { ascending: false })
-                .limit(1);
-            const nextPos = ((existing as any)?.[0]?.position || 0) + 1;
-
-            const { error } = await supabase
-                .from("waitlist" as any)
-                .insert({ book_id: bookId, user_id: userId, position: nextPos } as any);
-            if (error) throw error;
+            await api.post("/api/waitlist", { book_id: bookId, user_id: userId });
         },
         onSuccess: (_, variables) => {
             qc.invalidateQueries({ queryKey: ["waitlist", variables.bookId] });
@@ -76,12 +56,7 @@ export function useLeaveWaitlist() {
     const { toast } = useToast();
     return useMutation({
         mutationFn: async ({ bookId, userId }: { bookId: string; userId: string }) => {
-            const { error } = await supabase
-                .from("waitlist" as any)
-                .delete()
-                .eq("book_id", bookId)
-                .eq("user_id", userId);
-            if (error) throw error;
+            await api.delete(`/api/waitlist/${bookId}/${userId}`);
         },
         onSuccess: (_, variables) => {
             qc.invalidateQueries({ queryKey: ["waitlist", variables.bookId] });

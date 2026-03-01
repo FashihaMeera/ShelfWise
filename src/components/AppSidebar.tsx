@@ -53,7 +53,9 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
         <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground shrink-0">
           <Library className="h-4 w-4" />
         </div>
-        {!collapsed && <span className="ml-2.5 font-bold text-lg tracking-tight">ShelfWise</span>}
+        {!collapsed && (
+          <span className="ml-2.5 font-bold text-lg tracking-tight text-sidebar-foreground">ShelfWise</span>
+        )}
       </div>
 
       <nav className="flex-1 py-3 px-2 space-y-0.5 overflow-y-auto">

@@ -1,12 +1,13 @@
 # ShelfWise Library Buddy
 
-A modern **Library Management System** built with React, TypeScript, and Supabase.
+A modern **Library Management System** built with React, TypeScript, and FastAPI.
 
 ## Tech Stack
 
 - **Frontend**: React 18 + TypeScript + Vite
 - **Styling**: Tailwind CSS + shadcn/ui
-- **Backend**: Supabase (PostgreSQL, Auth, Edge Functions)
+- **Backend**: FastAPI + PostgreSQL + SQLAlchemy
+- **Auth**: JWT + Google OAuth 2.0
 - **State**: TanStack React Query
 - **Routing**: React Router v6
 - **Charts**: Recharts

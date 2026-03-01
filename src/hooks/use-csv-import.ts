@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api-client";
 import { useToast } from "@/hooks/use-toast";
 
 export interface CsvBookRow {
@@ -64,9 +64,8 @@ export function useBulkImportBooks() {
         description: r.description || null,
       }));
 
-      const { error } = await supabase.from("books").insert(books);
-      if (error) throw error;
-      return valid.length;
+      const result = await api.post<{ count: number }>("/api/books/bulk", books);
+      return result.count ?? valid.length;
     },
     onSuccess: (count) => {
       qc.invalidateQueries({ queryKey: ["books"] });

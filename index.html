@@ -6,7 +6,7 @@
     <link rel="icon" type="image/png" href="/favicon.png" />
     <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#1d8a5f" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>ShelfWise Library Buddy</title>
     <meta name="description" content="ShelfWise Library Buddy — A modern library management system" />
@@ -14,16 +14,40 @@
     <meta property="og:title" content="ShelfWise Library Buddy" />
     <meta property="og:description" content="A modern library management system" />
     <meta property="og:type" content="website" />
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
   </head>
 
   <body>
+    <script>
+      // Apply theme immediately before React mounts to prevent flash
+      (function() {
+        var theme = localStorage.getItem('shelfwise-theme');
+        
+        // If no saved theme, use system preference
+        if (!theme && window.matchMedia) {
+          theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+        theme = theme || 'light';
+        
+        document.documentElement.classList.remove('light', 'dark');
+        document.documentElement.classList.add(theme);
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
     <script>
       if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js').catch(() => {});
-        });
+        // Only register SW in production to avoid interfering with Vite HMR
+        if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+          window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js').catch(() => {});
+          });
+        } else {
+          // In dev mode, unregister any existing SW to prevent caching issues
+          navigator.serviceWorker.getRegistrations().then((registrations) => {
+            registrations.forEach((r) => r.unregister());
+          });
+        }
       }
     </script>
   </body>

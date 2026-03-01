@@ -4,7 +4,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { TopNavbar } from "@/components/TopNavbar";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { MobileDrawer } from "@/components/MobileDrawer";
-import { useTheme } from "@/hooks/use-theme";
+import { useTheme } from "@/contexts/ThemeContext";
 
 export function AppLayout() {
   const { theme, toggleTheme } = useTheme();

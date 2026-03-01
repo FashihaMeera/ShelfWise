@@ -1,13 +1,29 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { authApi, setTokens } from "@/lib/api-client";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Library, Mail, Lock, Loader2, Sun, Moon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useTheme } from "@/hooks/use-theme";
+import { useTheme } from "@/contexts/ThemeContext";
+
+declare global {
+  interface Window {
+    google?: {
+      accounts: {
+        id: {
+          initialize: (config: Record<string, unknown>) => void;
+          prompt: (callback?: (notification: { isNotDisplayed: () => boolean; isSkippedMoment: () => boolean }) => void) => void;
+        };
+      };
+    };
+  }
+}
+
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
 
 export default function Login() {
   const { theme, toggleTheme } = useTheme();
@@ -17,45 +33,82 @@ export default function Login() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { refreshUser } = useAuth();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
-    if (error) {
-      toast({ variant: "destructive", title: "Login failed", description: error.message });
-    } else {
+    try {
+      const res = await authApi.login(email, password);
+      setTokens(res.access_token, res.refresh_token);
+      await refreshUser();
       navigate("/dashboard");
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Login failed", description: err.message });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleGoogle = async () => {
+  const handleGoogleCallback = useCallback(async (credential: string) => {
     setGoogleLoading(true);
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: window.location.origin,
+    try {
+      const res = await authApi.googleAuth(credential);
+      setTokens(res.access_token, res.refresh_token);
+      await refreshUser();
+      navigate("/dashboard");
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Google sign-in failed", description: err.message });
+    } finally {
+      setGoogleLoading(false);
+    }
+  }, [navigate, refreshUser, toast]);
+
+  const handleGoogle = useCallback(() => {
+    if (!GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID === "YOUR_GOOGLE_CLIENT_ID_HERE") {
+      toast({ variant: "destructive", title: "Google Sign-In not configured", description: "Set VITE_GOOGLE_CLIENT_ID in your .env file." });
+      return;
+    }
+
+    if (!window.google?.accounts) {
+      toast({ variant: "destructive", title: "Google SDK not loaded", description: "Please refresh the page and try again." });
+      return;
+    }
+
+    setGoogleLoading(true);
+    window.google.accounts.id.initialize({
+      client_id: GOOGLE_CLIENT_ID,
+      callback: (response: { credential?: string }) => {
+        if (response.credential) {
+          handleGoogleCallback(response.credential);
+        } else {
+          setGoogleLoading(false);
+          toast({ variant: "destructive", title: "Google sign-in failed", description: "No credential received." });
+        }
       },
     });
-    setGoogleLoading(false);
-    if (error) {
-      toast({ variant: "destructive", title: "Google sign-in failed", description: error.message });
-    }
-  };
+    window.google.accounts.id.prompt((notification) => {
+      if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+        setGoogleLoading(false);
+        // Fallback: open popup manually via OAuth redirect
+        const redirectUri = `${window.location.origin}/auth/callback`;
+        const scope = "openid email profile";
+        const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${GOOGLE_CLIENT_ID}&redirect_uri=${redirectUri}&response_type=token id_token&scope=${scope}&nonce=${crypto.randomUUID()}`;
+        window.location.href = url;
+      }
+    });
+  }, [handleGoogleCallback, toast]);
 
   const handleForgotPassword = async () => {
     if (!email) {
       toast({ title: "Enter your email", description: "Type your email above, then click Forgot Password." });
       return;
     }
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
-    if (error) {
-      toast({ variant: "destructive", title: "Error", description: error.message });
-    } else {
+    try {
+      await authApi.requestPasswordReset(email);
       toast({ title: "Check your email", description: "We sent a password reset link." });
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Error", description: err.message });
     }
   };
 

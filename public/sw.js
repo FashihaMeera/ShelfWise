@@ -31,7 +31,7 @@ self.addEventListener("fetch", (event) => {
   if (request.method !== "GET" || !url.origin.includes(self.location.origin)) return;
 
   // API calls: network first
-  if (url.pathname.startsWith("/api") || url.hostname.includes("supabase")) {
+  if (url.pathname.startsWith("/api")) {
     event.respondWith(
       fetch(request).catch(() => caches.match(request))
     );

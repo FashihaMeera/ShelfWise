@@ -79,7 +79,7 @@ export default function ReadingChallenges() {
         setForm({ title: "", target_books: "5", start_date: format(new Date(), "yyyy-MM-dd"), end_date: format(new Date(Date.now() + 30 * 86400000), "yyyy-MM-dd") });
     };
 
-    const activeChallenges = challenges?.filter((c) => !isPast(new Date(c.end_date)) || (c as any)._complete) || [];
+    const activeChallenges = challenges?.filter((c) => !isPast(new Date(c.end_date))) || [];
     const pastChallenges = challenges?.filter((c) => isPast(new Date(c.end_date))) || [];
 
     return (

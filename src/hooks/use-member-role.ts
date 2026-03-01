@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api-client";
 import { useToast } from "@/hooks/use-toast";
 
 export function useUpdateMemberRole() {
@@ -8,12 +8,7 @@ export function useUpdateMemberRole() {
 
   return useMutation({
     mutationFn: async ({ targetUserId, newRole }: { targetUserId: string; newRole: string }) => {
-      const { data, error } = await supabase.functions.invoke("manage-role", {
-        body: { target_user_id: targetUserId, new_role: newRole },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      return data;
+      await api.put(`/api/members/${targetUserId}/role`, { role: newRole });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["members"] });
